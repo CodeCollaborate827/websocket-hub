@@ -11,3 +11,5 @@ public class WebsocketHubApplication {
 	}
 
 }
+
+//TODO: you need to configure the offset committing for Kafka consumer
