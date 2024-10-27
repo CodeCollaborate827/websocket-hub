@@ -1,6 +1,5 @@
 package com.chat.websocket_hub.config;
 
-import com.chat.websocket_hub.service.WebsocketSessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +19,7 @@ public class WebConfig {
   @Bean
   public HandlerMapping handlerMapping() {
     Map<String, WebSocketHandler> map = new HashMap<>();
-    map.put("/ws", wsMessageHandler);
+    map.put("/websocket", wsMessageHandler);
     int order = -1; // before annotated controllers
 
     return new SimpleUrlHandlerMapping(map, order);

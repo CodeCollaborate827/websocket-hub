@@ -1,7 +1,6 @@
 package com.chat.websocket_hub.config;
 
-import com.chat.websocket_hub.model.KafkaMessage;
-import com.chat.websocket_hub.service.WebsocketSessionService;
+import com.chat.websocket_hub.event.upstream.NewMessageEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -21,7 +20,7 @@ public class ConsumerBindingConfig {
 
 
   @Bean
-  public Consumer<Flux<Message<KafkaMessage>>> process() {
+  public Consumer<Flux<Message<NewMessageEvent>>> process() {
     return flux -> flux.doOnNext(msg -> process(msg))
             .subscribe();
   }
@@ -29,7 +28,7 @@ public class ConsumerBindingConfig {
 
   private void process(Message message) {
     log.info("Received {}", message);
-    KafkaMessage payload = (KafkaMessage) message.getPayload();
+    NewMessageEvent payload = (NewMessageEvent) message.getPayload();
     log.info("Sending message to sessionId: {}", payload.getId());
     wsMessageHandler.sendMessageToWsSession(payload.getId(), payload.getMessage());
   }

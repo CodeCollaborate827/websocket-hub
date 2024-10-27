@@ -1,6 +1,9 @@
+server:
+  port: 8085
+
 spring:
   application:
-    name: websocket-hub
+    name: ws-hub
   cloud:
     function:
       definition: process
@@ -13,3 +16,16 @@ spring:
           destination: chatapp.message
 
 
+# session start: topic.user.session.start
+# session end: topic.user.session.end
+
+# in the feature these are 2 topics the ws-hub listen and process event
+# topic.user.online
+# topic.user.offline
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    preferIpAddress: true
