@@ -1,6 +1,11 @@
 package com.chat.websocket_hub.config;
 
+import com.chat.websocket_hub.event.downstream.SessionEndEvent;
+import com.chat.websocket_hub.event.downstream.SessionStartEvent;
+import com.chat.websocket_hub.service.KafkaProducer;
 import com.chat.websocket_hub.service.WebsocketSessionService;
+import java.time.OffsetDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.buffer.DataBufferFactory;
@@ -12,17 +17,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
-import java.util.List;
-
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class WsMessageHandler implements WebSocketHandler {
-
+  private final KafkaProducer kafkaProducer;
   private final WebsocketSessionService websocketSessionService;
   private final String USER_ID = "userId";
-
-
 
   @Override
   public Mono<Void> handle(WebSocketSession session) {
@@ -32,16 +33,34 @@ public class WsMessageHandler implements WebSocketHandler {
     log.info("New Session started: {}, userId: {}", sessionId, userId);
     Sinks.Many<String> sink = websocketSessionService.addSession(sessionId);
 
-    // TODO: publish kafka message when session is started
+    SessionStartEvent sessionStartEvent =
+        SessionStartEvent.builder()
+            .sessionId(sessionId)
+            .userId(userId)
+            .createdAt(OffsetDateTime.now())
+            .build();
+    kafkaProducer.sendSessionStartEvent(sessionStartEvent);
+
     Flux<String> flux = sink.asFlux();
 
     DataBufferFactory bufferFactory = session.bufferFactory();
-    return session.send(flux.map(
-                    msg -> new WebSocketMessage(WebSocketMessage.Type.TEXT, bufferFactory.wrap(msg.getBytes()))
-            ))
-            .doFinally(signalType -> {
+    return session
+        .send(
+            flux.map(
+                msg ->
+                    new WebSocketMessage(
+                        WebSocketMessage.Type.TEXT, bufferFactory.wrap(msg.getBytes()))))
+        .doFinally(
+            signalType -> {
               log.info("Session ended: {}", sessionId);
-              //TODO: publish kafka message when session is ended
+              SessionEndEvent sessionEndEvent =
+                  SessionEndEvent.builder()
+                      .sessionId(sessionId)
+                      .userId(userId)
+                      .createdAt(OffsetDateTime.now())
+                      .build();
+              kafkaProducer.sendSessionEndEvent(sessionEndEvent);
+
               websocketSessionService.removeSession(sessionId);
             });
   }
@@ -63,5 +82,4 @@ public class WsMessageHandler implements WebSocketHandler {
     }
     return userIdHeader.get(0);
   }
-
 }
