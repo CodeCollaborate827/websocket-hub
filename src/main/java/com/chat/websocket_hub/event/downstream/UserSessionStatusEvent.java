@@ -1,17 +1,17 @@
 package com.chat.websocket_hub.event.downstream;
 
+import java.time.OffsetDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.OffsetDateTime;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SessionEndEvent {
+public class UserSessionStatusEvent {
+  private String type; // SESSION_START, SESSION_END
   private String userId;
   private String sessionId;
   private OffsetDateTime createdAt;

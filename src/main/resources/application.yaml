@@ -6,7 +6,7 @@ spring:
     name: ws-hub
   cloud:
     function:
-      definition: process
+      definition: process;sessionDownstream
     stream:
       kafka:
         binder:
@@ -14,14 +14,8 @@ spring:
       bindings:
         process-in-0:
           destination: chatapp.message
-
-
-# session start: topic.user.session.start
-# session end: topic.user.session.end
-
-# in the feature these are 2 topics the ws-hub listen and process event
-# topic.user.online
-# topic.user.offline
+        sessionDownstream-out-0:
+          destination: topic.user.session
 
 eureka:
   client:

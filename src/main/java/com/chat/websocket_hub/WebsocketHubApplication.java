@@ -8,10 +8,9 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 @EnableDiscoveryClient
 public class WebsocketHubApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(WebsocketHubApplication.class, args);
-	}
-
+  public static void main(String[] args) {
+    SpringApplication.run(WebsocketHubApplication.class, args);
+  }
 }
 
-//TODO: you need to configure the offset committing for Kafka consumer
+// TODO: you need to configure the offset committing for Kafka consumer
