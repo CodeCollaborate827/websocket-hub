@@ -2,8 +2,7 @@ package com.chat.websocket_hub.service.implementations;
 
 import com.chat.websocket_hub.config.ProducerBindingConfig;
 import com.chat.websocket_hub.event.Event;
-import com.chat.websocket_hub.event.downstream.SessionEndEvent;
-import com.chat.websocket_hub.event.downstream.SessionStartEvent;
+import com.chat.websocket_hub.event.downstream.UserSessionStatusEvent;
 import com.chat.websocket_hub.service.KafkaProducer;
 import com.chat.websocket_hub.utils.EventUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,28 +19,20 @@ import reactor.core.publisher.Sinks;
 public class KafkaProducerImpl implements KafkaProducer {
 
   @Override
-  public void sendSessionStartEvent(SessionStartEvent sessionStartEvent) {
-    sendEvent(sessionStartEvent, ProducerBindingConfig.sessionStartDownstreamSink, "session start");
-  }
-
-  @Override
-  public void sendSessionEndEvent(SessionEndEvent sessionEndEvent) {
-    sendEvent(sessionEndEvent, ProducerBindingConfig.sessionEndDownstreamSink, "session end");
-  }
-
-  private <T> void sendEvent(T eventObject, Sinks.Many<Message<Event>> sink, String eventType) {
+  public void sendSessionEvent(UserSessionStatusEvent sessionEvent) {
     try {
-      Event event = EventUtils.buildEvent(eventObject);
+      Event event = EventUtils.buildEvent(sessionEvent);
       Message<Event> message = MessageBuilder.withPayload(event).build();
-      Sinks.EmitResult result = sink.tryEmitNext(message);
+      Sinks.EmitResult result = ProducerBindingConfig.sessionDownstreamSink.tryEmitNext(message);
 
       if (result.isFailure()) {
-        log.error("Send {} event failed", eventType);
+        log.error("Send {} event failed", sessionEvent.getType());
       } else {
-        log.info("Send {} event success", eventType);
+        log.info("Send {} event success", sessionEvent.getType());
       }
     } catch (JsonProcessingException e) {
-      throw new RuntimeException("Failed to process JSON for " + eventType + " event", e);
+      throw new RuntimeException(
+          "Failed to process JSON for " + sessionEvent.getType() + " event", e);
     }
   }
 }

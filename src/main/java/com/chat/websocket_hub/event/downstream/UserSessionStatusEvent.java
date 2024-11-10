@@ -10,7 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SessionStartEvent {
+public class UserSessionStatusEvent {
+  private String type; // SESSION_START, SESSION_END
   private String userId;
   private String sessionId;
   private OffsetDateTime createdAt;
