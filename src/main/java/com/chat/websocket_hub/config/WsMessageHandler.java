@@ -1,6 +1,7 @@
 package com.chat.websocket_hub.config;
 
-import com.chat.websocket_hub.event.downstream.UserSessionStatusEvent;
+import com.chat.websocket_hub.constants.ApplicationConstants;
+import com.chat.websocket_hub.event.downstream.Session;
 import com.chat.websocket_hub.service.KafkaProducer;
 import com.chat.websocket_hub.service.WebsocketSessionService;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Component
@@ -25,15 +26,24 @@ import java.util.List;
 public class WsMessageHandler implements WebSocketHandler {
   private final KafkaProducer kafkaProducer;
   private final WebsocketSessionService websocketSessionService;
-  private final String USER_ID = "UserId";
+  private final String USER_ID = "userId";
+  private final String CLIENT_IP = "clientIp";
 
   @NotNull
   @Override
   public Mono<Void> handle(WebSocketSession session) {
     String sessionId = session.getId();
 
+    String userId = extractUserIdFromHeader(session);
+    if (userId == null) {
+      log.error("Unauthorized access attempt for session: {}", sessionId);
+      return session.close(CloseStatus.POLICY_VIOLATION);
+    }
+
+    String clientIp = extractClientIdFromHeader(session);
+
     // Extract userId and handle unauthorized access
-    return Mono.fromSupplier(() -> extractUserIdFromHeader(session))
+    return Mono.just(userId)
         .switchIfEmpty(
             Mono.defer(
                 () -> {
@@ -41,16 +51,17 @@ public class WsMessageHandler implements WebSocketHandler {
                   return session.close(CloseStatus.POLICY_VIOLATION).then(Mono.empty());
                 }))
         .flatMap(
-            userId -> {
+            u -> {
               log.info("New Session started: {}, userId: {}", sessionId, userId);
               Sinks.Many<String> sink = websocketSessionService.addSession(sessionId);
 
-              UserSessionStatusEvent sessionStartEvent =
-                  UserSessionStatusEvent.builder()
+              Session sessionStartEvent =
+                  Session.builder()
                       .sessionId(sessionId)
                       .userId(userId)
-                      .type("SESSION_START")
-                      .createdAt(OffsetDateTime.now())
+                      .status(ApplicationConstants.SESSION_START)
+                      .clientIp(clientIp)
+                      .timestamp(Instant.now().getEpochSecond())
                       .build();
               kafkaProducer.sendSessionEvent(sessionStartEvent);
 
@@ -66,12 +77,13 @@ public class WsMessageHandler implements WebSocketHandler {
                   .doFinally(
                       signalType -> {
                         log.info("Session ended: {}", sessionId);
-                        UserSessionStatusEvent sessionEndEvent =
-                            UserSessionStatusEvent.builder()
+                        Session sessionEndEvent =
+                            Session.builder()
                                 .sessionId(sessionId)
                                 .userId(userId)
-                                .type("SESSION_END")
-                                .createdAt(OffsetDateTime.now())
+                                .clientIp(clientIp)
+                                .status(ApplicationConstants.SESSION_END)
+                                .timestamp(Instant.now().getEpochSecond())
                                 .build();
                         kafkaProducer.sendSessionEvent(sessionEndEvent);
 
@@ -96,5 +108,13 @@ public class WsMessageHandler implements WebSocketHandler {
       return null;
     }
     return userIdHeader.getFirst();
+  }
+
+  private String extractClientIdFromHeader(WebSocketSession session) {
+    List<String> clientIdHeader = session.getHandshakeInfo().getHeaders().get(CLIENT_IP);
+    if (clientIdHeader == null || clientIdHeader.isEmpty()) {
+      return null;
+    }
+    return clientIdHeader.getFirst();
   }
 }

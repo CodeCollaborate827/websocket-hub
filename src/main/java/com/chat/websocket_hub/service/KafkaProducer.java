@@ -1,7 +1,7 @@
 package com.chat.websocket_hub.service;
 
-import com.chat.websocket_hub.event.downstream.UserSessionStatusEvent;
+import com.chat.websocket_hub.event.downstream.Session;
 
 public interface KafkaProducer {
-  void sendSessionEvent(UserSessionStatusEvent data);
+  void sendSessionEvent(Session data);
 }
