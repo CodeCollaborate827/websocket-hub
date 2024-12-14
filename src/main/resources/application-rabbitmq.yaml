@@ -11,3 +11,6 @@ rabbitmq:
       name: user.message.exchange
       type: topic
       durable: false # if true, the exchange will survive broker restarts. in development, we don't need this
+    queue:
+      name: user.message.queue.websocket.instance1
+      durable: false

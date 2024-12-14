@@ -2,10 +2,9 @@ package com.chat.websocket_hub.config;
 
 import com.chat.websocket_hub.constants.ApplicationConstants;
 import com.chat.websocket_hub.event.downstream.Session;
+import com.chat.websocket_hub.service.AMQPService;
 import com.chat.websocket_hub.service.KafkaProducer;
 import com.chat.websocket_hub.service.WebsocketSessionService;
-import java.time.Instant;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -19,12 +18,16 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
+import java.time.Instant;
+import java.util.List;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class WsMessageHandler implements WebSocketHandler {
   private final KafkaProducer kafkaProducer;
   private final WebsocketSessionService websocketSessionService;
+  private final AMQPService amqpService;
   private final String USER_ID = "userId";
   private final String CLIENT_IP = "clientIp";
 
@@ -52,7 +55,6 @@ public class WsMessageHandler implements WebSocketHandler {
         .flatMap(
             u -> {
               log.info("New Session started: {}, userId: {}", sessionId, userId);
-              Sinks.Many<String> sink = websocketSessionService.addSession(sessionId);
 
               Session sessionStartEvent =
                   Session.builder()
@@ -62,6 +64,9 @@ public class WsMessageHandler implements WebSocketHandler {
                       .clientIp(clientIp)
                       .timestamp(Instant.now().getEpochSecond())
                       .build();
+              // Start the session
+              Sinks.Many<String> sink = websocketSessionService.addSessionForUser(userId, sessionId);
+              amqpService.subscribeUserMessages(userId);
               kafkaProducer.sendSessionEvent(sessionStartEvent);
 
               Flux<String> flux = sink.asFlux();
@@ -84,21 +89,27 @@ public class WsMessageHandler implements WebSocketHandler {
                                 .status(ApplicationConstants.SESSION_END)
                                 .timestamp(Instant.now().getEpochSecond())
                                 .build();
-                        kafkaProducer.sendSessionEvent(sessionEndEvent);
 
-                        websocketSessionService.removeSession(sessionId);
+                        // End the session
+                        kafkaProducer.sendSessionEvent(sessionEndEvent);
+                        websocketSessionService.removeSessionForUser(userId, sessionId);
+                        amqpService.unsubscribeUserMessages(userId);
                       });
             });
   }
 
-  public void sendMessageToWsSession(String sessionId, String message) {
-    Sinks.Many<String> session = websocketSessionService.getSession(sessionId);
-    if (session == null) {
-      log.error("Websocket session not found for id: {}", sessionId);
-      return;
-    }
+  public void sendMessageToUser(String userId, String message) {
+    List<String> sessions = websocketSessionService.getSessionsByUserId(userId);
 
-    session.tryEmitNext(message);
+    // Send message to all sessions of the user
+    for (String sessionId : sessions) {
+        Sinks.Many<String> session = websocketSessionService.getSessionBySessionId(sessionId);
+        if (session == null) {
+            log.error("Websocket session not found for id: {}", sessionId);
+            return;
+        }
+        session.tryEmitNext(message);    }
+
   }
 
   private String extractUserIdFromHeader(WebSocketSession session) {

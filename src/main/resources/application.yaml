@@ -16,6 +16,9 @@ spring:
           destination: topic.websocket.message
         sessionDownstream-out-0:
           destination: topic.websocket.user.session
+  profiles:
+    include: rabbitmq
+
 
 eureka:
   client:
