@@ -1,14 +1,13 @@
 package com.chat.websocket_hub.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Sinks;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Sinks;
 
 @Service
 @RequiredArgsConstructor
@@ -18,18 +17,18 @@ public class WebsocketSessionService {
   //  private Sinks.Many<>
   private final AMQPService amqpService;
 
-
   // create class for session and userSessionList
   private Map<String, Sinks.Many<String>> sessionSinkMap = new ConcurrentHashMap<>();
   private Map<String, List<String>> userSessionSinkMap = new ConcurrentHashMap<>();
+
   public Sinks.Many<String> addSessionForUser(String userId, String sessionId) {
 
     userSessionSinkMap.putIfAbsent(userId, new ArrayList<>()); // make sure user has a session list
     List<String> sessionListOfUser = userSessionSinkMap.get(userId);
 
     if (sessionId == null) {
-        log.warn("Cannot add session with null sessionId for user {}", userId);
-        return null;
+      log.warn("Cannot add session with null sessionId for user {}", userId);
+      return null;
     }
     Sinks.Many<String> sink = Sinks.many().multicast().onBackpressureBuffer();
     sessionSinkMap.put(sessionId, sink); // add session to session map
@@ -45,7 +44,7 @@ public class WebsocketSessionService {
   }
 
   public List<String> getSessionsByUserId(String userId) {
-      return userSessionSinkMap.getOrDefault(userId, new ArrayList<>());
+    return userSessionSinkMap.getOrDefault(userId, new ArrayList<>());
   }
 
   public void removeSessionForUser(String userId, String sessionId) {
@@ -60,6 +59,7 @@ public class WebsocketSessionService {
       return;
     }
     sessionSinkMap.remove(sessionId); // remove session from session map
-    sessionListOfUser.removeIf(session -> session.equals(sessionId)); // remove session from user session list
+    sessionListOfUser.removeIf(
+        session -> session.equals(sessionId)); // remove session from user session list
   }
 }

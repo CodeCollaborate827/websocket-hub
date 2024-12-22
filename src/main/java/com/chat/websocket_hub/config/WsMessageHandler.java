@@ -5,6 +5,8 @@ import com.chat.websocket_hub.event.downstream.Session;
 import com.chat.websocket_hub.service.AMQPService;
 import com.chat.websocket_hub.service.KafkaProducer;
 import com.chat.websocket_hub.service.WebsocketSessionService;
+import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -17,9 +19,6 @@ import org.springframework.web.reactive.socket.WebSocketSession;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
-
-import java.time.Instant;
-import java.util.List;
 
 @Component
 @Slf4j
@@ -65,7 +64,8 @@ public class WsMessageHandler implements WebSocketHandler {
                       .timestamp(Instant.now().getEpochSecond())
                       .build();
               // Start the session
-              Sinks.Many<String> sink = websocketSessionService.addSessionForUser(userId, sessionId);
+              Sinks.Many<String> sink =
+                  websocketSessionService.addSessionForUser(userId, sessionId);
               amqpService.subscribeUserMessages(userId);
               kafkaProducer.sendSessionEvent(sessionStartEvent);
 
@@ -103,13 +103,13 @@ public class WsMessageHandler implements WebSocketHandler {
 
     // Send message to all sessions of the user
     for (String sessionId : sessions) {
-        Sinks.Many<String> session = websocketSessionService.getSessionBySessionId(sessionId);
-        if (session == null) {
-            log.error("Websocket session not found for id: {}", sessionId);
-            return;
-        }
-        session.tryEmitNext(message);    }
-
+      Sinks.Many<String> session = websocketSessionService.getSessionBySessionId(sessionId);
+      if (session == null) {
+        log.error("Websocket session not found for id: {}", sessionId);
+        return;
+      }
+      session.tryEmitNext(message);
+    }
   }
 
   private String extractUserIdFromHeader(WebSocketSession session) {

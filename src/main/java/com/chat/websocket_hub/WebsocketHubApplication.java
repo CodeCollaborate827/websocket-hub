@@ -12,8 +12,8 @@ public class WebsocketHubApplication {
     SpringApplication.run(WebsocketHubApplication.class, args);
   }
 }
-//TODO: add log messsages DEBUG, INFO, WARN, ERROR
+// TODO: add log messsages DEBUG, INFO, WARN, ERROR
 // TODO: implement metrics
 
 // TODO: you need to configure the offset committing for Kafka consumer
-//TODO: cleanup code
+// TODO: cleanup code

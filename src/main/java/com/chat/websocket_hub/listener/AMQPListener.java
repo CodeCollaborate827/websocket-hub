@@ -13,15 +13,13 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class AMQPListener {
 
-    private final WsMessageHandler wsMessageHandler;
+  private final WsMessageHandler wsMessageHandler;
 
-    @RabbitListener(queues = "${rabbitmq.message.queue.name}")
-    public void receiveMessage(String message) {
-        log.info("Received message: {}", message);
-        WebsocketMessage websocketMessage = JsonUtils.fromJson(message, WebsocketMessage.class);
-        String userId = websocketMessage.getUserId();
-        wsMessageHandler.sendMessageToUser(userId, message);
-    }
-
-
+  @RabbitListener(queues = "${rabbitmq.message.queue.name}")
+  public void receiveMessage(String message) {
+    log.info("Received message: {}", message);
+    WebsocketMessage websocketMessage = JsonUtils.fromJson(message, WebsocketMessage.class);
+    String userId = websocketMessage.getUserId();
+    wsMessageHandler.sendMessageToUser(userId, message);
+  }
 }
