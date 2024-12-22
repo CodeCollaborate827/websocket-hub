@@ -13,9 +13,12 @@ spring:
           brokers: localhost:9092
       bindings:
         process-in-0:
-          destination: chatapp.message
+          destination: topic.websocket.message
         sessionDownstream-out-0:
-          destination: topic.user.session
+          destination: topic.websocket.user.session
+  profiles:
+    include: rabbitmq
+
 
 eureka:
   client:

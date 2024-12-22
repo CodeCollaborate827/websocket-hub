@@ -26,6 +26,6 @@ public class ConsumerBindingConfig {
     log.info("Received {}", message);
     NewMessageEvent payload = (NewMessageEvent) message.getPayload();
     log.info("Sending message to sessionId: {}", payload.getId());
-    wsMessageHandler.sendMessageToWsSession(payload.getId(), payload.getMessage());
+    wsMessageHandler.sendMessageToUser(payload.getId(), payload.getMessage());
   }
 }
